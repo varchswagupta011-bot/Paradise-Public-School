@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Paradise Public School"
+description = "A professional, welcoming school website for Paradise Public School, helping prospective families discover academics, admissions, campus life, notices, events, and contact information."
+version = "1.0.0"
+id = "artifacts/paradise-public-school"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 21579
+
+[services.development]
+run = "pnpm --filter @workspace/paradise-public-school run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/paradise-public-school", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/paradise-public-school/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "21579"
+BASE_PATH = "/"

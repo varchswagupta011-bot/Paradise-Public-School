@@ -1,0 +1,292 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: API specification
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: school-admin
+    description: Student and parent administration
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+  /admin/summary:
+    get:
+      operationId: getAdminSummary
+      tags: [school-admin]
+      summary: Get admin overview summary
+      responses:
+        "200":
+          description: Summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminSummary"
+  /admin/students:
+    get:
+      operationId: listStudents
+      tags: [school-admin]
+      summary: List students with linked family and academic data
+      parameters:
+        - in: query
+          name: search
+          schema: { type: string }
+        - in: query
+          name: status
+          schema: { type: string, enum: [all, active, inactive] }
+      responses:
+        "200":
+          description: Students
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Student" }
+    post:
+      operationId: createStudent
+      tags: [school-admin]
+      summary: Add a student
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/StudentInput" }
+      responses:
+        "201":
+          description: Created student
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Student" }
+  /admin/students/{studentId}:
+    get:
+      operationId: getStudent
+      tags: [school-admin]
+      summary: View a student profile
+      parameters:
+        - $ref: "#/components/parameters/StudentId"
+      responses:
+        "200":
+          description: Student profile
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/StudentProfile" }
+        "404": { description: Not found }
+    patch:
+      operationId: updateStudent
+      tags: [school-admin]
+      summary: Edit or assign student details
+      parameters:
+        - $ref: "#/components/parameters/StudentId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/StudentInput" }
+      responses:
+        "200":
+          description: Updated student
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Student" }
+  /admin/parents:
+    get:
+      operationId: listParents
+      tags: [school-admin]
+      summary: List parents with linked students
+      parameters:
+        - in: query
+          name: search
+          schema: { type: string }
+      responses:
+        "200":
+          description: Parents
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Parent" }
+    post:
+      operationId: createParent
+      tags: [school-admin]
+      summary: Add a parent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ParentInput" }
+      responses:
+        "201":
+          description: Created parent
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Parent" }
+  /admin/parents/{parentId}:
+    patch:
+      operationId: updateParent
+      tags: [school-admin]
+      summary: Edit parent and link them to students
+      parameters:
+        - $ref: "#/components/parameters/ParentId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ParentInput" }
+      responses:
+        "200":
+          description: Updated parent
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Parent" }
+components:
+  parameters:
+    StudentId:
+      in: path
+      name: studentId
+      required: true
+      schema: { type: string }
+    ParentId:
+      in: path
+      name: parentId
+      required: true
+      schema: { type: string }
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+    StudentInput:
+      type: object
+      properties:
+        firstName: { type: string }
+        lastName: { type: string }
+        admissionNo: { type: string }
+        dateOfBirth: { type: string }
+        className: { type: string }
+        section: { type: string }
+        rollNumber: { type: number }
+        parentIds:
+          type: array
+          items: { type: string }
+        active: { type: boolean }
+      required: [firstName, lastName, admissionNo, dateOfBirth, className, section, rollNumber, parentIds, active]
+    Student:
+      allOf:
+        - $ref: "#/components/schemas/StudentInput"
+        - type: object
+          properties:
+            id: { type: string }
+            subjects:
+              type: array
+              items: { $ref: "#/components/schemas/Subject" }
+            attendance: { $ref: "#/components/schemas/Attendance" }
+            results:
+              type: array
+              items: { $ref: "#/components/schemas/Result" }
+            fees: { $ref: "#/components/schemas/FeeSummary" }
+            parents:
+              type: array
+              items: { $ref: "#/components/schemas/ParentLink" }
+          required: [id, subjects, attendance, results, fees, parents]
+    StudentProfile:
+      allOf:
+        - $ref: "#/components/schemas/Student"
+    ParentInput:
+      type: object
+      properties:
+        firstName: { type: string }
+        lastName: { type: string }
+        relationship: { type: string }
+        email: { type: string }
+        phone: { type: string }
+        occupation: { type: string }
+        studentIds:
+          type: array
+          items: { type: string }
+      required: [firstName, lastName, relationship, email, phone, occupation, studentIds]
+    Parent:
+      allOf:
+        - $ref: "#/components/schemas/ParentInput"
+        - type: object
+          properties:
+            id: { type: string }
+            students:
+              type: array
+              items: { $ref: "#/components/schemas/StudentLink" }
+          required: [id, students]
+    ParentLink:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        relationship: { type: string }
+        phone: { type: string }
+      required: [id, name, relationship, phone]
+    StudentLink:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        className: { type: string }
+        section: { type: string }
+        feesDue: { type: number }
+      required: [id, name, className, section, feesDue]
+    Subject:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        teacher: { type: string }
+      required: [id, name, teacher]
+    Attendance:
+      type: object
+      properties:
+        present: { type: number }
+        absent: { type: number }
+        percentage: { type: number }
+      required: [present, absent, percentage]
+    Result:
+      type: object
+      properties:
+        subject: { type: string }
+        score: { type: number }
+        grade: { type: string }
+      required: [subject, score, grade]
+    FeeSummary:
+      type: object
+      properties:
+        total: { type: number }
+        paid: { type: number }
+        due: { type: number }
+        nextDue: { type: string }
+      required: [total, paid, due, nextDue]
+    AdminSummary:
+      type: object
+      properties:
+        totalStudents: { type: number }
+        activeStudents: { type: number }
+        totalParents: { type: number }
+        feesCollected: { type: number }
+        feesDue: { type: number }
+        attendanceRate: { type: number }
+      required: [totalStudents, activeStudents, totalParents, feesCollected, feesDue, attendanceRate]
+
